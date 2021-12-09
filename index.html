@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Of Stan</title>
+    <meta name="description" content="calculate birthdays">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="www/theme_common.css" rel="stylesheet">
+    <link href="www/index.css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="wrapper">
+        <header class="box">
+            <h1>Mark Of Stan</h1>
+            <div>
+                <p>Input some example strings, and I will try to imitate them.</p>
+            </div>
+        </header>
+
+        <div id="inputbox" class="box">
+            <div>
+                <label for="examples">Provide example strings on separate rows :</label>
+                <textarea id="examples" name="examples" rows="5" cols="33">
+Cogip
+Floteo
+Soprotec
+Sogefrap
+Botea
+Mireo
+Cofrap
+Sogiflup
+</textarea>
+                <button id="learnButton" type="button">Learn</button>
+                <button id="imitateButton" type="button">Imitate</button>
+            </div>
+        </div>
+        <div id="resultbox" class="box"></div>
+
+        <footer id="infosbox" class="box">
+            <p>See Github for : <a href="https://github.com/smmilut/markofstan" target="_blank">code</a>, <a
+                    href="https://github.com/smmilut/markofstan/blob/main/LICENSE" target="_blank">license</a>,
+                <a href="https://github.com/smmilut/markofstan/blob/main/README.md" target="_blank">privacy</a>.
+            </p>
+        </footer>
+    </div>
+    <script src="www/index.js" type="module"></script>
+</body>
+
+</html>

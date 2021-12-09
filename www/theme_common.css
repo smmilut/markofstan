@@ -1,0 +1,91 @@
+/****  General  ****/
+
+body {
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Oxygen", "Ubuntu", "Cantarell", "Open Sans", sans-serif;
+  font-size: 100%;
+  color: #ddd;
+  background-color: #222;
+}
+
+code {
+  background-color: #353839;
+  color: #D9D6CF;
+  font-size: 0.7em;
+  font-family: "Lucida Console", Monaco, monospace;
+}
+
+button {
+  padding: 0.5em 1em;
+  border: none;
+  cursor: pointer;
+  background-color: #324;
+  color: #ddd;
+  transition-duration: 0.4s;
+  box-shadow: 4px 4px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+  background-color: #213;
+  color: #999;
+  box-shadow: 2px 2px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+
+button:disabled {
+  background-color: #222;
+  color: #999;
+  cursor: not-allowed;
+  box-shadow: 0px rgba(0, 0, 0, 0.2);
+}
+
+button:hover:disabled {
+  background-color: #222;
+  color: #999;
+}
+
+h1 {
+  margin: 0px;
+}
+
+/**** Tables ****/
+
+table {
+  border: 2px solid #324;
+  border-collapse: collapse;
+  box-shadow: 2px 2px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+td, th {
+  border: 1px solid #222;
+  padding: 8px;
+}
+
+th {
+  background-color: #324;
+  color: #BBB;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #333;
+}
+
+tbody tr:hover {
+  background-color: #111;
+}
+
+/**** Layout ****/
+
+#wrapper {
+  display: grid;
+  background-color: #ddd;
+  color: #444;
+  grid-gap: 10px;
+  padding: 10px;
+}
+
+.box {
+  background-color: #444;
+  color: #fff;
+  border-radius: 5px;
+  padding: 20px;
+}

@@ -1,0 +1,47 @@
+#resultbox {
+    overflow-y: scroll;
+    height: 300px;
+}
+
+/* grid layout assignment */
+header {
+    grid-area: title;
+}
+
+#inputbox {
+    grid-area: input;
+}
+
+#resultbox {
+    grid-area: result;
+}
+
+#infosbox {
+    grid-area: infos;
+}
+
+/* mobile layout */
+#wrapper {
+    grid-template-columns: 100%;
+    grid-template-areas:
+    "title"
+    "input"
+    "result"
+    "infos";
+    border-radius: 0px;
+}
+
+@media only screen and (min-width: 900px) {
+    #wrapper {
+        grid-template-columns: 30% auto;
+        grid-template-rows: auto minmax(min-content, 10px) auto auto;
+        grid-template-areas:
+        "title title"
+        "input result"
+        "infos infos";
+        border-radius: 5px;
+    }
+    body {
+        margin: 10px;
+    }
+}
