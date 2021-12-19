@@ -12,11 +12,19 @@ const Rng = {
      *   noiseFn: (optional) 1D noise function,
      * }
      */
-    init: function Rng_init(initOptions) {
-        initOptions = initOptions || {};
-        this.noiseFn = initOptions.noiseFn || SquirrelNoise.get1dNoiseZeroToOne;
-        this.seed = initOptions.seed || 0;
-        this.initialPosition = initOptions.position || 0;
+    init(
+        {
+            noiseFn = SquirrelNoise.get1dNoiseZeroToOne,
+            seed = 0,
+            position = 0,
+        } = {}
+    ) {
+        console.log(noiseFn,
+            seed,
+            position);
+        this.noiseFn = noiseFn;
+        this.seed = seed;
+        this.initialPosition = position;
         this.position = this.initialPosition;
     },
     /**
@@ -24,7 +32,7 @@ const Rng = {
      * If parameter `position` is provided, then make that the new initial position.
      * @param {int} position (optional) new initial position in the noise
      */
-    resetPosition: function Rng_resetPosition(position) {
+    resetPosition(position) {
         if (position === undefined) {
             /// reset
             this.position = this.initialPosition;
@@ -42,7 +50,7 @@ const Rng = {
      *   noiseFn: 1D noise function,
      * }
      */
-    getState: function Rng_getState() {
+    getState() {
         return {
             position: this.position,
             seed: this.seed,
@@ -54,7 +62,7 @@ const Rng = {
      *   roll for a new random number and advance to the next position
      * @returns next random number in sequence (type depends on `this.noiseFn`)
      */
-    roll: function Rng_roll() {
+    roll() {
         return this.noiseFn(this.position++, this.seed);
     },
     /**
@@ -63,7 +71,7 @@ const Rng = {
      * @param {array} array [value, ...]
      * @returns random item.value from the array
      */
-    select: function Rng_select(array) {
+    select(array) {
         const randIndex = Math.floor(this.roll() * array.length);
         return array[randIndex];
     },
@@ -73,9 +81,9 @@ const Rng = {
      * @param {array} array [{ value, weight }, ...]
      * @returns random item.value from the array
      */
-    selectWeighted: function Rng_selectWeighted(array) {
+    selectWeighted(array) {
         let selectedItem;
-        let selectedScore = -1;
+        let selectedScore = -Infinity;
         for (const item of array) {
             let score = this.roll() * item.weight;
             if (score > selectedScore) {
@@ -92,10 +100,10 @@ const Rng = {
      * @param {array} exceptionKeys keys that are omitted
      * @returns random [key, value] pair from the dictionary
      */
-     selectWeightedDict: function Rng_selectWeightedDict(dict, exceptionKeys) {
+    selectWeightedDict(dict, exceptionKeys = []) {
         let selectedKey;
         let selectedItem;
-        let selectedScore = -1;
+        let selectedScore = -Infinity;
         for (const key of Object.keys(dict)) {
             if (exceptionKeys.includes(key)) {
                 /// skip that key
@@ -116,7 +124,7 @@ const Rng = {
      * @param {float} zeroToOneChance probablity of returning true, from 0.0 to 1.0
      * @returns {boolean} true if event happened
      */
-    isChance: function Rng_isChance(zeroToOneChance) {
+    isChance(zeroToOneChance) {
         return this.roll() < zeroToOneChance;
     },
 };

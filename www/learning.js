@@ -11,7 +11,7 @@ function newDict() {
 const Learner = {
     ANCHORSTART: "^",
     ANCHOREND: "$",
-    init: function Learner_init(exampleText) {
+    init(exampleText) {
         this.rng = Rng.newRng({ seed: 0 });
         this.parse(exampleText);
     },
@@ -19,7 +19,7 @@ const Learner = {
      * Learn from example text
      * @param {string} exampleText example strings separated by newlines
      */
-    parse: function Learner_parse(exampleText) {
+    parse(exampleText) {
         this.chain = newDict();
         const exampleStrings = exampleText.trim().split(/\r\n|\r|\n/g);
         for (const exampleString of exampleStrings) {
@@ -46,7 +46,7 @@ const Learner = {
      * @param {string} thisChar this character
      * @param {string} nextChar the following character
      */
-    addMatch: function Learner_addMatch(thisChar, nextChar) {
+    addMatch(thisChar, nextChar) {
         if (this.chain[thisChar] === undefined) {
             /// thisChar is new as a left character
             this.chain[thisChar] = newDict();
@@ -64,7 +64,7 @@ const Learner = {
      * @param {boolean} canEnd are we allowed to give the termination character
      * @returns random character that is likely to follow char
      */
-    imitateCharAfter: function Learner_imitateCharAfter(char, canEnd) {
+    imitateCharAfter(char, canEnd) {
         let exceptionKeys;
         if (canEnd) {
             exceptionKeys = []
@@ -79,7 +79,7 @@ const Learner = {
      * @param {integer} wordLengthMax maximum word length
      * @returns a string that imitates the example strings
      */
-    imitate: function Learner_imitate(wordLengthMin, wordLengthMax) {
+    imitate(wordLengthMin, wordLengthMax) {
         let imitatedString = "";
         let char = this.ANCHORSTART;
         for (let charIndex = 0; charIndex < wordLengthMax; charIndex++) {

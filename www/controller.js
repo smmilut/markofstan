@@ -7,7 +7,7 @@ import * as Learning from "./learning.js";
  */
 
 /** Object that learns from strings */
-let learner;
+let Controller_learner;
 
 /** Always call init first */
 export function init() {
@@ -16,13 +16,13 @@ export function init() {
 
 /** Input sends new example text */
 export function onAskLearn(exampleText) {
-    learner = Learning.newLearner(exampleText);
+    Controller_learner = Learning.newLearner(exampleText);
     Input.enableImitateButton();
 }
 
 /** Input asks for imitations */
 export function onAskImitate() {
-    if (learner !== undefined) {
-        Output.showImitations(learner);
+    if (Controller_learner !== undefined) {
+        Output.showImitations(Controller_learner);
     }
 }

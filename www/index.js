@@ -8,21 +8,8 @@ import * as Output from "./output.js";
  * Call this first.
  */
  function initSubModules() {
-    Input.init({
-        examplesId: "examples",
-        learnButtonId: "learnButton",
-        imitateButtonId: "imitateButton",
-    });
-    Output.init(
-        {
-            resultboxid: "resultbox",
-        },
-        {
-            imitationCount: 15,
-            wordLengthMin: 5,
-            wordLengthMax: 12,
-        },
-    );
+    Input.init();
+    Output.init();
     Controller.init();
 }
 

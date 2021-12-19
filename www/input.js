@@ -4,22 +4,28 @@ import * as Controller from "./controller.js";
  */
 
 /** HTML element for inputting example strings */
-let examplesEl;
-let learnButton;
-let imitateButton;
+let Input_examplesEl;
+let Input_learnButton;
+let Input_imitateButton;
 
 /** Always call init first */
-export function init(htmlIds) {
-    examplesEl = document.getElementById(htmlIds.examplesId);
-    learnButton = document.getElementById(htmlIds.learnButtonId);
-    learnButton.addEventListener("click", learnClicked);
-    imitateButton = document.getElementById(htmlIds.imitateButtonId);
-    imitateButton.addEventListener("click", imitateClicked);
+export function init(
+    {
+        examplesId = "examples",
+        learnButtonId = "learnButton",
+        imitateButtonId = "imitateButton",
+    } = {}
+) {
+    Input_examplesEl = document.getElementById(examplesId);
+    Input_learnButton = document.getElementById(learnButtonId);
+    Input_learnButton.addEventListener("click", learnClicked);
+    Input_imitateButton = document.getElementById(imitateButtonId);
+    Input_imitateButton.addEventListener("click", imitateClicked);
 }
 
 /** Learn button clicked */
 function learnClicked(_event) {
-    const exampleText = examplesEl.value;
+    const exampleText = Input_examplesEl.value;
     Controller.onAskLearn(exampleText);
 }
 
@@ -29,9 +35,9 @@ function imitateClicked(_event) {
 }
 
 export function disableImitateButton() {
-    imitateButton.disabled = true;
+    Input_imitateButton.disabled = true;
 }
 
 export function enableImitateButton() {
-    imitateButton.disabled = false;
+    Input_imitateButton.disabled = false;
 }
