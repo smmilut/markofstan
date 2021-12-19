@@ -18,7 +18,7 @@ export function showImitations(learner) {
     resultboxEl.innerHTML = "";
     const ulEl = document.createElement("ul");
     for (let imitationIndex = 0; imitationIndex < imitationCount; imitationIndex++) {
-        const liEl = document.createElement("ul");
+        const liEl = document.createElement("li");
         liEl.innerHTML = learner.imitate(wordLengthMin, wordLengthMax);
         ulEl.appendChild(liEl);
     }
