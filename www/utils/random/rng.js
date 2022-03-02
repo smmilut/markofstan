@@ -19,9 +19,6 @@ const Rng = {
             position = 0,
         } = {}
     ) {
-        console.log(noiseFn,
-            seed,
-            position);
         this.noiseFn = noiseFn;
         this.seed = seed;
         this.initialPosition = position;
@@ -69,17 +66,20 @@ const Rng = {
      * Return a random item.value from array
      *  selected randomly
      * @param {array} array [value, ...]
-     * @returns random item.value from the array
+     * @returns random { index, value } from the array
      */
     select(array) {
         const randIndex = Math.floor(this.roll() * array.length);
-        return array[randIndex];
+        return {
+            index: randIndex,
+            value: array[randIndex],
+        };
     },
     /**
      * Return a random item.value from array
      *  selected randomly but weighted according to item.weight
-     * @param {array} array [{ value, weight }, ...]
-     * @returns random item.value from the array
+     * @param {array} array [{ otherProperties, weight }, ...]
+     * @returns random { value } from the array
      */
     selectWeighted(array) {
         let selectedItem;
@@ -91,14 +91,16 @@ const Rng = {
                 selectedScore = score;
             }
         }
-        return selectedItem;
+        return {
+            value: selectedItem,
+        };
     },
     /**
      * Return a random [key, value] pair from dictionary
      *  selected randomly but weighted according to value.weight
      * @param {object} dict { key: { weight, otherProperties }, ...}
      * @param {array} exceptionKeys keys that are omitted
-     * @returns random [key, value] pair from the dictionary
+     * @returns random {key, value} object from the dictionary
      */
     selectWeightedDict(dict, exceptionKeys = []) {
         let selectedKey;
@@ -117,7 +119,10 @@ const Rng = {
                 selectedScore = score;
             }
         }
-        return selectedKey;
+        return {
+            key: selectedKey,
+            value: selectedItem,
+        };
     },
     /**
      * Roll a random boolean true `zeroToOneChance` * 100 % of the time

@@ -1,10 +1,25 @@
 import * as Rng from "./utils/random/rng.js";
 import * as FP from "./utils/fp.js";
-import * as Types from "./utils/types.js";
+import { Dict } from "./utils/dict.js";
 
 
 /**
  * Object that models string learning and imitation
+ * chain is :
+ * {  // chain
+ *   "premiseCharX" : {  // premise: { nextChunksDict }
+ *     "nextCharX0": {  // nextChunk: { nextChunkInfo }
+ *       weight: x0,  // nextChunkWeight
+ *     },
+ *     "nextCharX1": { weight: x1 },
+ *     ...
+ *   },
+ *   "premiseCharY" : {
+ *     "nextCharY0": { weight: y0 },
+ *     "nextCharY1": { weight: y1 },
+ *     ...
+ *   },
+ * }
  */
 const Learner = {
     ANCHORSTART: "^",
@@ -18,56 +33,49 @@ const Learner = {
      * @param {string} exampleText example strings separated by newlines
      */
     parse(exampleText) {
-        this.chain = Types.newDict();
+        this.chain = Dict.new();
         FP.pipe(
             FP.trim,
             FP.splitLines,
-            FP.forEach(
-                FP.pipe(
-                    FP.prepend(this.ANCHORSTART),
-                    FP.append(this.ANCHOREND),
-                    FP.asArray,
-                    FP.forEach(function iterWord(_char, charIndex, word) {
-                        const leftSlice = FP.slice2(0, charIndex)(word);
-                        const rightSlice = FP.slice1(charIndex)(word);
-                        const premise = FP.last(leftSlice);
-                        const nextChunk = FP.first(rightSlice);
-                        this.addMatch(premise, nextChunk);
-                    }.bind(this)),
-                )
-            ),
+            FP.forEach(FP.pipe(
+                FP.prepend(this.ANCHORSTART),
+                FP.append(this.ANCHOREND),
+                FP.asArray,
+                FP.map(function sliceWord(_char, charIndex, word) {
+                    const leftSlice = FP.slice2(0, charIndex)(word);
+                    const rightSlice = FP.slice1(charIndex)(word);
+                    return {
+                        premise: FP.last(leftSlice),
+                        nextChunk: FP.first(rightSlice),
+                    };
+                }),
+                FP.filter(function removeEmpty({ premise, nextChunk }) {
+                    return premise !== undefined && nextChunk != undefined;
+                }),
+                FP.forEach(function buildChain({ premise, nextChunk }) {
+                    this.chain[premise] = this.addMatch(nextChunk, this.chain[premise]);
+                }.bind(this)),
+            )),
         )(exampleText);
-        console.log(this.chain);
-        for (const premise of Object.keys(this.chain)) {
-            let premiseWeight = 0;
-            for (const nextChunk of Object.keys(this.chain[premise])) {
-                premiseWeight += this.chain[premise][nextChunk].weight;
-            }
-            this.chain[premise].weight = premiseWeight;
-        }
-
+        console.log("chain", this.chain);
     },
     /**
      * Learn that this character can be followed by this next character
      * @param {string} premise this character
      * @param {string} nextChunk the following character
      */
-    addMatch(premise, nextChunk) {
-        if (premise === undefined || nextChunk === undefined) {
-            console.log(premise, nextChunk);
-            return;
-        }
-        if (this.chain[premise] === undefined) {
-            /// premise is new as a left character
-            this.chain[premise] = Types.newDict();
-        }
-        if (this.chain[premise][nextChunk] === undefined) {
+    addMatch(nextChunk, nextChunksDict_old) {
+        let nextChunksDict = Dict.copy(nextChunksDict_old);
+
+        let nextChunkInfo = FP.copyObj(nextChunksDict[nextChunk]);
+        if (nextChunkInfo.weight === undefined) {
             /// nextChunk is new as a next character
-            this.chain[premise][nextChunk] = Types.newDict();
-            this.chain[premise][nextChunk].weight = 1;
-        } else {
-            this.chain[premise][nextChunk].weight += 1;
+            nextChunkInfo.weight = 0;
         }
+        nextChunkInfo.weight += 1;
+        nextChunksDict[nextChunk] = nextChunkInfo;
+
+        return nextChunksDict;
     },
     /**
      * Imitate the examples, and provide a random character that is likely to follow `char`
@@ -82,7 +90,7 @@ const Learner = {
         } else {
             exceptionKeys = [this.ANCHOREND];
         }
-        return this.rng.selectWeightedDict(this.chain[premise], exceptionKeys);
+        return this.rng.selectWeightedDict(this.chain[premise], exceptionKeys).key;
     },
     /**
      * Generate a random word that imitates the example strings
@@ -129,4 +137,8 @@ export function newLearner(exampleText) {
     const learner = Object.create(Learner);
     learner.init(exampleText);
     return learner;
+}
+
+function mergeChains(chain1, chain2) {
+    const newChain = Dict.new();
 }

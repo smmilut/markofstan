@@ -189,7 +189,7 @@ export const pipe = reverse(compose);
  * @param {string} methodName name of the object's method
  * @returns {Function} f(...args, object)
  */
- export function invoker(arity, methodName) {
+export function invoker(arity, methodName) {
     return renameFn(
         methodName,
         curryMany(function invoke(...args) {
@@ -209,6 +209,8 @@ export const map = invoker(1, "map");
 export const reduce = invoker(2, "reduce");
 
 export const forEach = invoker(1, "forEach");
+
+export const filter = invoker(1, "filter");
 
 export const slice1 = invoker(1, "slice");
 export const slice2 = invoker(2, "slice");
@@ -248,17 +250,21 @@ export const path = curryMany(function path(propStr, o) {
     )(propStr);
 });
 
+export function copyObj(obj) {
+    return Object.assign({}, obj);
+}
+
 /**
  * @param {object} updatedFields 
  * @param {object} oldObject 
  * @returns new object based on oldObject but with fields updated (without modifying input)
  */
-export function assign(updatedFields, oldObject, emptyObject = Object.create(null)) {
+export const assign = curryMany(function assign(updatedFields, oldObject) {
     return Object.assign(
-        Object.assign(emptyObject, oldObject),
+        copyObj(oldObject),
         updatedFields
     );
-};
+});
 
 export const add = curryMany(function add(n1, n2) {
     return n1 + n2;
