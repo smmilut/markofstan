@@ -21,6 +21,7 @@ Dict.copy = function Dict_copy(dict) {
 
 Dict.of = Dict.copy;
 
+
 Dict.deepCopy = function Dict_deepCopy(dict) {
     if (dict === undefined || dict[Dict_specialKey_isType] !== true) {
         /// not a Dict
@@ -38,15 +39,6 @@ Dict.assign = function Dict_assign(updatedFields, oldDict) {
         Dict.copy(oldDict),
         updatedFields
     );
-};
-
-/**
- * @param {*} secondary fallback content
- * @param {*} primary 
- * @returns 
- */
-Dict.merge = function Dict_merge(secondary, primary) {
-    return Dict.assign(Dict.deepCopy(primary), Dict.deepCopy(secondary));
 };
 
 Object.freeze(Dict);

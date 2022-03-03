@@ -12,9 +12,9 @@ export function init(
         resultboxid = "resultbox",
     } = {},
     {
-        imitationCount = 15,
-        wordLengthMin = 5,
-        wordLengthMax = 12,
+        imitationCount = 10,
+        wordLengthMin = 4,
+        wordLengthMax = 15,
     } = {}
 ) {
     Output_resultboxEl = document.getElementById(resultboxid);
@@ -23,12 +23,12 @@ export function init(
     Output_wordLengthMax = wordLengthMax;
 }
 
-export function showImitations(learner) {
+export function showImitations(imitator) {
     Output_resultboxEl.innerHTML = "";
     const ulEl = document.createElement("ul");
     for (let imitationIndex = 0; imitationIndex < Output_imitationCount; imitationIndex++) {
         const liEl = document.createElement("li");
-        liEl.innerHTML = learner.imitate(Output_wordLengthMin, Output_wordLengthMax);
+        liEl.innerHTML = imitator.imitate(Output_wordLengthMin, Output_wordLengthMax);
         ulEl.appendChild(liEl);
     }
     Output_resultboxEl.appendChild(ulEl);

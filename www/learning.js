@@ -2,9 +2,82 @@ import * as Rng from "./utils/random/rng.js";
 import * as FP from "./utils/fp.js";
 import { Dict } from "./utils/dict.js";
 
+const ANCHORSTART = "^";
+const ANCHOREND = "$";
 
 /**
- * Object that models string learning and imitation
+ * @returns {Dict} a new empty Markov chain
+ */
+ const newChain = Dict.new;
+
+/**
+ * @param {Dict} chainOld previous Markov chain
+ * @param {match} match { premise, nextChunk } a chain link representing a match
+ * @returns {Dict} the updated chain
+ */
+ function addToChain(chainOld, { premise, nextChunk }) {
+    /// Deep copy this chunk info only
+    const chain = Dict.copy(chainOld);
+    const nextChunksDict = Dict.copy(chain[premise]);
+    const nextChunkInfo = FP.copyObj(nextChunksDict[nextChunk]);
+    /// Create chunk info if it doesn't exist
+    if (nextChunkInfo.weight === undefined) {
+        nextChunkInfo.weight = 0;
+    }
+    /// Update weight
+    nextChunkInfo.weight += 1;
+    /// Update nextChunksDict copy
+    nextChunksDict[nextChunk] = nextChunkInfo;
+    /// Update chain copy
+    chain[premise] = nextChunksDict;
+    return chain;
+}
+
+/**
+ * From one word, build an Array of "match" objects
+ *   that each represent chain links that existed in the word.
+ * @param {String} exampleWord representing one word example
+ * @returns Array of matches : [{premise, nextChunk}, ...]
+ */
+ const splitWordMatches = FP.pipe(
+    FP.prepend(ANCHORSTART),
+    FP.append(ANCHOREND),
+    FP.asArray,
+    FP.map(function sliceWord(_char, charIndex, word) {
+        const leftSlice = FP.slice2(0, charIndex)(word);
+        const rightSlice = FP.slice1(charIndex)(word);
+        return {
+            premise: FP.last(leftSlice),
+            nextChunk: FP.first(rightSlice),
+        };
+    }),
+    FP.filter(function removeEmpty({ premise, nextChunk }) {
+        return premise !== undefined && nextChunk != undefined;
+    }),
+);
+
+/**
+ * @param {String} exampleText example strings separated by newlines
+ * @returns Array of lines, without empty lines
+ */
+ const splitLines = FP.pipe(
+    FP.trim,
+    FP.splitLines,
+);
+
+/**
+ * Build a Markov Chain from a list of string examples presented in a single line-separated text.
+ * @param {String} exampleText example strings separated by newlines
+ * @returns {Dict} Markov chain represented as a Dict(premise -> Dict(nextChunk -> {weight}))
+ */
+const parseTextToChain = FP.pipe(
+    splitLines,
+    FP.flatMap(splitWordMatches),
+    FP.reduce(addToChain, newChain()),
+);
+
+/**
+ * Object that models string learning
  * chain is :
  * {  // chain
  *   "premiseCharX" : {  // premise: { nextChunksDict }
@@ -21,61 +94,38 @@ import { Dict } from "./utils/dict.js";
  *   },
  * }
  */
-const Learner = {
-    ANCHORSTART: "^",
-    ANCHOREND: "$",
-    init(exampleText) {
-        this.rng = Rng.newRng({ seed: 0 });
-        this.parse(exampleText);
+ const Learner = {
+    init() {
+        this.chain = newChain();
     },
     /**
      * Learn from example text
      * @param {string} exampleText example strings separated by newlines
      */
-    parse(exampleText) {
-        this.chain = Dict.new();
-        FP.pipe(
-            FP.trim,
-            FP.splitLines,
-            FP.forEach(FP.pipe(
-                FP.prepend(this.ANCHORSTART),
-                FP.append(this.ANCHOREND),
-                FP.asArray,
-                FP.map(function sliceWord(_char, charIndex, word) {
-                    const leftSlice = FP.slice2(0, charIndex)(word);
-                    const rightSlice = FP.slice1(charIndex)(word);
-                    return {
-                        premise: FP.last(leftSlice),
-                        nextChunk: FP.first(rightSlice),
-                    };
-                }),
-                FP.filter(function removeEmpty({ premise, nextChunk }) {
-                    return premise !== undefined && nextChunk != undefined;
-                }),
-                FP.forEach(function buildChain({ premise, nextChunk }) {
-                    this.chain[premise] = this.addMatch(nextChunk, this.chain[premise]);
-                }.bind(this)),
-            )),
-        )(exampleText);
+    learn(exampleText) {
+        this.chain = parseTextToChain(exampleText);
         console.log("chain", this.chain);
     },
-    /**
-     * Learn that this character can be followed by this next character
-     * @param {string} premise this character
-     * @param {string} nextChunk the following character
-     */
-    addMatch(nextChunk, nextChunksDict_old) {
-        let nextChunksDict = Dict.copy(nextChunksDict_old);
+};
 
-        let nextChunkInfo = FP.copyObj(nextChunksDict[nextChunk]);
-        if (nextChunkInfo.weight === undefined) {
-            /// nextChunk is new as a next character
-            nextChunkInfo.weight = 0;
-        }
-        nextChunkInfo.weight += 1;
-        nextChunksDict[nextChunk] = nextChunkInfo;
+/**
+ * Instantiate a new Learner
+ * @param {string} exampleText example strings separated by newlines
+ * @returns new Learner instance
+ */
+export function newLearner() {
+    const learner = Object.create(Learner);
+    learner.init();
+    return learner;
+}
 
-        return nextChunksDict;
+/**
+ * Object that models string imitation
+ */
+const Imitator = {
+    init(chain, seed = 0) {
+        this.rng = Rng.newRng({ seed: seed });
+        this.chain = chain;
     },
     /**
      * Imitate the examples, and provide a random character that is likely to follow `char`
@@ -88,7 +138,7 @@ const Learner = {
         if (canEnd) {
             exceptionKeys = []
         } else {
-            exceptionKeys = [this.ANCHOREND];
+            exceptionKeys = [ANCHOREND];
         }
         return this.rng.selectWeightedDict(this.chain[premise], exceptionKeys).key;
     },
@@ -100,7 +150,7 @@ const Learner = {
      */
     imitate(wordLengthMin, wordLengthMax) {
         let imitatedString = "";
-        let chunk = this.ANCHORSTART;
+        let chunk = ANCHORSTART;
         for (let charIndex = 0; charIndex < wordLengthMax; charIndex++) {
             const canEnd = charIndex > wordLengthMin;
             if (this.chain[chunk] === undefined) {
@@ -116,7 +166,7 @@ const Learner = {
             if (chunk === undefined) {
                 /// Ending prematurely.
                 return imitatedString + "!!";
-            } else if (chunk === this.ANCHOREND) {
+            } else if (chunk === ANCHOREND) {
                 // Ending inside bounds
                 return imitatedString + ".";
             } else {
@@ -126,19 +176,15 @@ const Learner = {
         }
         return imitatedString;
     },
-}
+};
 
 /**
- * Instantiate a new Learner
- * @param {string} exampleText example strings separated by newlines
- * @returns new Learner instance
+ * Instantiate a new Imitator
+ * @param {Dict} chain Markov chained learned
+ * @returns new Imitator instance
  */
-export function newLearner(exampleText) {
-    const learner = Object.create(Learner);
-    learner.init(exampleText);
-    return learner;
-}
-
-function mergeChains(chain1, chain2) {
-    const newChain = Dict.new();
+ export function newImitator(...args) {
+    const imitator = Object.create(Imitator);
+    imitator.init(...args);
+    return imitator;
 }

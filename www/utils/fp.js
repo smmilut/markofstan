@@ -212,6 +212,8 @@ export const forEach = invoker(1, "forEach");
 
 export const filter = invoker(1, "filter");
 
+export const flatMap = invoker(1, "flatMap");
+
 export const slice1 = invoker(1, "slice");
 export const slice2 = invoker(2, "slice");
 
