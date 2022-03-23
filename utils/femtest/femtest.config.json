@@ -1,0 +1,7 @@
+{
+    "description": "example config",
+    "testFiles": [
+        "../../tests/learning.js"
+    ],
+    "excluded": []
+}

@@ -1,21 +1,20 @@
-import * as Rng from "./utils/random/rng.js";
 import * as FP from "./utils/fp.js";
 import { Dict } from "./utils/dict.js";
 
-const ANCHORSTART = "^";
-const ANCHOREND = "$";
+export const ANCHORSTART = "^";
+export const ANCHOREND = "$";
 
 /**
  * @returns {Dict} a new empty Markov chain
  */
- const newChain = Dict.new;
+const newChain = Dict.new;
 
 /**
  * @param {Dict} chainOld previous Markov chain
  * @param {match} match { premise, nextChunk } a chain link representing a match
  * @returns {Dict} the updated chain
  */
- function addToChain(chainOld, { premise, nextChunk }) {
+function addToChain(chainOld, { premise, nextChunk }) {
     /// Deep copy this chunk info only
     const chain = Dict.copy(chainOld);
     const nextChunksDict = Dict.copy(chain[premise]);
@@ -39,7 +38,7 @@ const ANCHOREND = "$";
  * @param {String} exampleWord representing one word example
  * @returns Array of matches : [{premise, nextChunk}, ...]
  */
- const splitWordMatches = FP.pipe(
+const splitWordMatches = FP.pipe(
     FP.prepend(ANCHORSTART),
     FP.append(ANCHOREND),
     FP.asArray,
@@ -60,7 +59,7 @@ const ANCHOREND = "$";
  * @param {String} exampleText example strings separated by newlines
  * @returns Array of lines, without empty lines
  */
- const splitLines = FP.pipe(
+const splitLines = FP.pipe(
     FP.trim,
     FP.splitLines,
 );
@@ -94,7 +93,7 @@ const parseTextToChain = FP.pipe(
  *   },
  * }
  */
- const Learner = {
+const Learner = {
     init() {
         this.chain = newChain();
     },
@@ -119,72 +118,11 @@ export function newLearner() {
     return learner;
 }
 
-/**
- * Object that models string imitation
- */
-const Imitator = {
-    init(chain, seed = 0) {
-        this.rng = Rng.newRng({ seed: seed });
-        this.chain = chain;
-    },
-    /**
-     * Imitate the examples, and provide a random character that is likely to follow `char`
-     * @param {string} premise preceding character
-     * @param {boolean} canEnd are we allowed to give the termination character
-     * @returns random character that is likely to follow char
-     */
-    imitateCharAfter(premise, canEnd) {
-        let exceptionKeys;
-        if (canEnd) {
-            exceptionKeys = []
-        } else {
-            exceptionKeys = [ANCHOREND];
-        }
-        return this.rng.selectWeightedDict(this.chain[premise], exceptionKeys).key;
-    },
-    /**
-     * Generate a random word that imitates the example strings
-     * @param {integer} wordLengthMin minimum word length
-     * @param {integer} wordLengthMax maximum word length
-     * @returns a string that imitates the example strings
-     */
-    imitate(wordLengthMin, wordLengthMax) {
-        let imitatedString = "";
-        let chunk = ANCHORSTART;
-        for (let charIndex = 0; charIndex < wordLengthMax; charIndex++) {
-            const canEnd = charIndex > wordLengthMin;
-            if (this.chain[chunk] === undefined) {
-                /// No next character.
-                if (canEnd) {
-                    return imitatedString;
-                } else {
-                    /// Ending prematurely.
-                    return imitatedString + "!";
-                }
-            }
-            chunk = this.imitateCharAfter(chunk, canEnd);
-            if (chunk === undefined) {
-                /// Ending prematurely.
-                return imitatedString + "!!";
-            } else if (chunk === ANCHOREND) {
-                // Ending inside bounds
-                return imitatedString + ".";
-            } else {
-                /// continue progress
-                imitatedString += chunk;
-            }
-        }
-        return imitatedString;
-    },
+/** exported only for testing */
+export const test = {
+    newChain,
+    addToChain,
+    splitWordMatches,
+    splitLines,
+    parseTextToChain,
 };
-
-/**
- * Instantiate a new Imitator
- * @param {Dict} chain Markov chained learned
- * @returns new Imitator instance
- */
- export function newImitator(...args) {
-    const imitator = Object.create(Imitator);
-    imitator.init(...args);
-    return imitator;
-}
