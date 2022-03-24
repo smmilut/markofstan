@@ -1,5 +1,7 @@
 import * as FP from "./utils/fp.js";
 import { Dict } from "./utils/dict.js";
+import { runBackground } from "./utils/background.js";
+import * as Controller from "./controller.js";
 
 export const ANCHORSTART = "^";
 export const ANCHOREND = "$";
@@ -33,6 +35,36 @@ function addToChain(chainOld, { premise, nextChunk }) {
 }
 
 /**
+ * aggregates an array of matches into an existing chain
+ * @param {Object} param {
+ *   previousWorkDone: the existing chain
+ *   latestWork: [ an array of :
+ *     { premise, nextChunk },
+ *   ]
+ * }
+ * @returns {Dict} chain
+ */
+function aggregateWorkToChain({ previousWorkDone: chainOld, latestWork: nextMatches, }) {
+    return nextMatches.reduce(addToChain, chainOld);
+}
+
+/**
+ * @param {integer} n 
+ * @returns {Function} :: xs -> {
+            nextWorkInput: the n first elements of xs,
+            workRemaining: the remaining elements of xs,
+        }
+ */
+function takeFromArray(n) {
+    return function takeN(xs) {
+        return {
+            nextWorkInput: FP.slice2(0, n)(xs),
+            workRemaining: FP.slice1(n)(xs),
+        };
+    };
+}
+
+/**
  * From one word, build an Array of "match" objects
  *   that each represent chain links that existed in the word.
  * @param {String} exampleWord representing one word example
@@ -56,6 +88,45 @@ const splitWordMatches = FP.pipe(
 );
 
 /**
+ * Aggregate a new array into the existing array (not mutating inputs)
+ * @param {object} param {
+ *   previousWorkDone: existing array
+ *   latestWork: new array
+ * }
+ * @returns 
+ */
+function aggregateWorkToArray({ previousWorkDone, latestWork, }) {
+    return [...previousWorkDone, ...latestWork];
+}
+
+/**
+ * @param {object} param {
+ *   workRemaining: array of work
+ * }
+ * @returns {Boolean} 
+ */
+function isArrayWorkCompleted({ workRemaining, }) {
+    return workRemaining === undefined || workRemaining.length === 0;
+}
+
+/**
+ * Dispatch progress to the Controller
+ * @param {String} title 
+ * @returns {Function} :: { workInput, workRemaining, } -> (side effects)
+ */
+function namedProgressRemaining(title) {
+    return function dispatchProgress({ workInput, workRemaining, }) {
+        const progressPct = (workInput.length - workRemaining.length) * 100.0 / workInput.length;
+        // console.log(title, "progress", progressPct);
+        Controller.onRequestProgressUpdate({
+            progressPct,
+            title,
+            isCompleted: progressPct >= 100,
+        });
+    };
+}
+
+/**
  * @param {String} exampleText example strings separated by newlines
  * @returns Array of lines, without empty lines
  */
@@ -67,12 +138,32 @@ const splitLines = FP.pipe(
 /**
  * Build a Markov Chain from a list of string examples presented in a single line-separated text.
  * @param {String} exampleText example strings separated by newlines
- * @returns {Dict} Markov chain represented as a Dict(premise -> Dict(nextChunk -> {weight}))
+ * @returns {Promise} that returns a Markov chain represented as a Dict(premise -> Dict(nextChunk -> {weight}))
  */
 const parseTextToChain = FP.pipe(
     splitLines,
-    FP.flatMap(splitWordMatches),
-    FP.reduce(addToChain, newChain()),
+    runBackground({
+        splitWork: takeFromArray(5000),
+        doWork: FP.flatMap(splitWordMatches),
+        aggregateWork: aggregateWorkToArray,
+        initialWork: [],
+        isWorkCompleted: isArrayWorkCompleted,
+        dispatchProgress: namedProgressRemaining("(1/2) parsing"),
+    }),
+    FP.then(FP.pipe(
+        FP.prop("workDone"),
+        runBackground({
+            splitWork: takeFromArray(2000),
+            doWork: FP.identity,
+            aggregateWork: aggregateWorkToChain,
+            initialWork: newChain(),
+            isWorkCompleted: isArrayWorkCompleted,
+            dispatchProgress: namedProgressRemaining("(2/2) aggregating"),
+        }),
+    )),
+    FP.then(
+        FP.prop("workDone"),
+    ),
 );
 
 /**
@@ -102,8 +193,11 @@ const Learner = {
      * @param {string} exampleText example strings separated by newlines
      */
     learn(exampleText) {
-        this.chain = parseTextToChain(exampleText);
-        console.log("chain", this.chain);
+        return parseTextToChain(exampleText).then(function assignChain(c) {
+            this.chain = c;
+            console.log("chain", this.chain);
+            return c;
+        }.bind(this));
     },
 };
 

@@ -19,9 +19,15 @@ export function init() {
 /** Input sends new example text */
 export function onAskLearn(exampleText) {
     Controller_learner = Learning.newLearner();
-    Controller_learner.learn(exampleText);
-    Controller_imitator = Imitating.newImitator(Controller_learner.chain);
-    Input.enableImitateButton();
+    Controller_learner.learn(exampleText).then(function enableImitate() {
+        onRequestProgressUpdate({
+            progressPct: 100,
+            title: "completed",
+            isCompleted: true,
+        });
+        Controller_imitator = Imitating.newImitator(Controller_learner.chain);
+        Input.enableImitateButton();
+    });
 }
 
 /** Input asks for imitations */
@@ -30,3 +36,5 @@ export function onAskImitate() {
         Output.showImitations(Controller_imitator);
     }
 }
+
+export const onRequestProgressUpdate = Output.scheduleProgressUpdate;

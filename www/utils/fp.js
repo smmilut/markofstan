@@ -45,8 +45,8 @@ export function constant(c) {
 }
 
 /**
- * @param {*} fn function that accepts an array of arguments
- * @returns version of `fn` that accepts arguments separately
+ * @param {*} fn function that accepts arguments separately
+ * @returns version of `fn` that accepts an array of arguments
  */
 export function spread(fn) {
     return function applySpreadArgs(argsArray) {
@@ -55,8 +55,8 @@ export function spread(fn) {
 }
 
 /**
- * @param {*} fn function that accepts arguments separately
- * @returns version of `fn` that accepts an array of arguments
+ * @param {*} fn function that accepts an array of arguments
+ * @returns version of `fn` that accepts arguments separately
  */
 export function gather(fn) {
     return function applyGatheredArgs(...args) {
@@ -142,8 +142,10 @@ export function curryMany(fn, arity = fn.length) {
 }
 
 /**
+ * Note : if the resulting function is called with fewer arguments, then
+ *   it is still curried, wating for the rest.
  * @param {*} fn 
- * @returns function that will should all its arguments in one call (not always)
+ * @returns function that should take all its arguments in one call (not always)
  */
 export function uncurry(fn) {
     return function uncurried(...args) {
@@ -155,17 +157,24 @@ export function uncurry(fn) {
     }
 }
 
-
 /**
  * @param  {...any} fns 
  * @returns f(g(h(etc...)))
  */
 export function compose(...fns) {
-    if (fns.some(function isUndefined(f) { return f === undefined; })) {
-        throw new Error(`FP.compose : failed to compose because function was undefined ${JSON.stringify(fns)}`);
+    if (fns.some(isntFunction)) {
+        const notFunctions = fns.
+            filter(isntFunction).
+            map(jsonStringifyWithReplacer(
+                function replaceUndefined(_key, value) {
+                    if (value === undefined) { return null; }
+                    return value;
+                })).
+            join(", ");
+        throw new TypeError(`FP.compose : failed to compose because argument was not a function : ${notFunctions}`);
     }
     return renameFn(
-        "composed(" + fns.map(function (f) { return f.name || "anonymous"; }).join(" > ") + ")",
+        "composed(" + fns.map(function (f) { return f.name || "anonymous"; }).join(" < ") + ")",
         function (result) {
             // copy the array of functions
             let fns_copy = [...fns];
@@ -181,6 +190,22 @@ export function compose(...fns) {
 
 export const pipe = reverse(compose);
 
+/**
+ * Run each fns[i] separately on all the [args], then
+ *   run `after` on the results as separate arguments
+ * @param {Function} after :: results -> final
+ * @param  {...Function} fns :: args -> result
+ * @returns {Function} :: args -> final
+ */
+export function converge(after, ...fns) {
+    return function applyConverged(...args) {
+        return pipe(
+            map(function applyFn(fn) { return fn(...args); }),
+            spread(after),
+        )(fns);
+    };
+}
+
 /* ---------- Pointfree Classic Utilities ---------- */
 
 /**
@@ -195,10 +220,20 @@ export function invoker(arity, methodName) {
         curryMany(function invoke(...args) {
             const obj = args[arity];
             const method = obj[methodName];
-            if (typeof method === "function") {
+            if (isFunction(method)) {
                 return obj[methodName](...(args.slice(0, arity)));
             } else {
-                throw new TypeError(`Not a function : ${JSON.stringify(obj)} doesn't have a callable method named \"${methodName}\".`);
+                const objStr = JSON.stringify(
+                    obj,
+                    function replacer(_key, value) {
+                        if (isFunction(value)) {
+                            const functionHeader = value.toString().split(")")[0] + ")";
+                            return functionHeader;
+                        }
+                        return value;
+                    }
+                );
+                throw new TypeError(`Not a function : ${objStr} doesn't have a callable method named \"${methodName}\".`);
             }
         }, arity + 1)
     );
@@ -214,7 +249,48 @@ export const filter = invoker(1, "filter");
 
 export const flatMap = invoker(1, "flatMap");
 
+/**
+ * @returns a copy that is sorted with .sort()
+ */
+export const sorted = pipe(shallowCopyArray, invoker(0, "sort"));
+/**
+ * @param {*} compareFn 
+ * @returns a copy that is sorted with .sort(compareFn)
+ */
+export const sortedWith = curryMany(function sortedWith(compareFn, xs) {
+    return shallowCopyArray(xs).sort(compareFn);
+});
+
+/**
+ * Useful for generating comparison functions for sorting
+ * @param {*} p 
+ * @param {*} a 
+ * @param {*} b 
+ * @returns a.p - b.p
+ */
+export const compareWithProp = curryMany(function compareWithProp(p, a, b) {
+    return prop(p, a) - prop(p, b);
+});
+
+/**
+ * @param {*} a 
+ * @param {*} b 
+ * @returns 
+ */
+export const zip = curryMany(function zip(a, b) {
+    let result = [];
+    const size = Math.min(a.length, b.length);
+    for (let index = 0; index < size; index++) {
+        result[index] = [a[index], b[index]];
+    }
+    return result;
+});
+
+export const toString = invoker(0, "toString");
+
+/** Array.slice with 1 parameter */
 export const slice1 = invoker(1, "slice");
+/** Array.slice with 2 parameters */
 export const slice2 = invoker(2, "slice");
 
 export const append = invoker(1, "concat");
@@ -223,10 +299,38 @@ export const prepend = curryMany(reverse(append), 2);
 
 export const split = invoker(1, "split");
 
+export const join = invoker(1, "join");
+
+export const matchAll = invoker(1, "matchAll");
+
+/**
+ * From a regex that has named groups, return a function that
+ *   takes an array of strings to
+ *   match them against the regex and
+ *   returns the flat result of all named groups into an object
+ * @param {regex} regex 
+ * @returns F :: string -> { regexMatchedGroup0, regexMatchedGroup1, regexMatchedGroup2, ... }
+ */
+export function matchAllNamedGroups(regex) {
+    return flatMap(
+        pipe(
+            matchAll(regex),
+            shallowCopyArray,
+            map(prop("groups")),
+        ),
+    );
+};
+
+export const replace = invoker(2, "replace");
+
 export const splitLines = split(/\r\n|\r|\n/g);
 
 export const trim = invoker(0, "trim");
 
+/** pad with zeros */
+export const padZeros = curryMany(function padStart(numZeros, n) {
+    return n.toString().padStart(numZeros, "0");
+});
 
 /**
  * @param {string} p property name
@@ -268,6 +372,20 @@ export const assign = curryMany(function assign(updatedFields, oldObject) {
     );
 });
 
+/**
+ * Turn a "constructor" function into a function that doesn't need "new"
+ * @param {Function} constructorFn "constructor" function that needs to be called with "new"
+ * @param  {...any} args 
+ * @returns {Function} :: args -> constructed object
+ */
+export function newInstance(constructorFn) {
+    return function getConstructorParams(...args) {
+        return new constructorFn(...args);
+    };
+}
+
+export const then = invoker(1, "then");
+
 export const add = curryMany(function add(n1, n2) {
     return n1 + n2;
 });
@@ -276,13 +394,17 @@ export const mul = curryMany(function mul(n1, n2) {
     return n1 * n2;
 });
 
+export const sum = reduce(add, 0);
+
 export const last = curryMany(function last(xs) {
     return xs[xs.length - 1];
 });
 export const first = prop(0);
 
-export function asDate(str) {
-    return new Date(str);  //new Date(str + "Z");
+export const asDate = newInstance(Date);
+
+export function shallowCopyArray(xs) {
+    return [...xs];
 }
 
 export function asArray(str) {
@@ -334,3 +456,11 @@ export function renameFn(customName, fn) {
     };
     return renamedFn;
 }
+
+export function jsonStringifyWithReplacer(replacer, spacer) {
+    return function jsonStringify(o) {
+        return JSON.stringify(o, replacer, spacer);
+    }
+}
+function isFunction(f) { return typeof f === "function"; };
+function isntFunction(f) { return !isFunction(f); };
